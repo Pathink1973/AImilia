@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { Message } from '../types';
 import {
   findDoctorsBySpecialty,
   findMedicationsByCondition,
@@ -51,7 +52,7 @@ DIRETRIZES DE COMUNICAÇÃO:
    - Rotinas estruturadas
    - Adaptações ambientais`;
 
-function formatMedicalInfo(query: string) {
+async function formatMedicalInfo(query: string) {
   const queryLower = query.toLowerCase();
   let relevantContext = '';
 
@@ -89,46 +90,29 @@ function formatMedicalInfo(query: string) {
   return relevantContext;
 }
 
-interface Message {
-  text: string;
-  isBot: boolean;
-  timestamp: string;
-}
-
 export async function getChatGPTResponse(userInput: string, conversationHistory: Message[] = []): Promise<string> {
   try {
-    const medicalContext = formatMedicalInfo(userInput);
-
-    // Converter histórico da conversa para o formato do OpenAI
+    const medicalInfo = await formatMedicalInfo(userInput);
+    
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT }
-    ];
-
-    // Adicionar histórico da conversa (últimas 6 mensagens para manter o contexto sem exceder limites)
-    const recentHistory = conversationHistory.slice(-6);
-    recentHistory.forEach(msg => {
-      messages.push({
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...conversationHistory.map(msg => ({
         role: msg.isBot ? 'assistant' : 'user',
         content: msg.text
-      });
-    });
+      })),
+      { role: 'user', content: userInput + (medicalInfo ? `\n\nInformações médicas relevantes:\n${medicalInfo}` : '') }
+    ] as const;
 
-    // Adicionar a pergunta atual
-    messages.push({ 
-      role: 'user', 
-      content: userInput + (medicalContext ? `\n\nContexto Médico Relevante:\n${medicalContext}` : '')
-    });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+    const completion = await openai.chat.completions.create({
       messages,
+      model: 'gpt-4',
       temperature: 0.7,
-      max_tokens: 800 // Aumentado para respostas mais completas
+      max_tokens: 800,
     });
 
-    return response.choices[0]?.message?.content || 'Desculpe, não consegui processar sua pergunta.';
+    return completion.choices[0]?.message?.content || 'Desculpe, não consegui gerar uma resposta.';
   } catch (error) {
-    console.error('Error getting ChatGPT response:', error);
-    throw error; // Propagar o erro para tratamento adequado no componente
+    console.error('Erro ao obter resposta:', error);
+    return 'Desculpe, ocorreu um erro ao processar sua pergunta. Por favor, tente novamente.';
   }
 }
