@@ -1,7 +1,7 @@
-# AImilia® Tutor AI - Alzheimer
+![AImilia-logo](https://github.com/user-attachments/assets/4b3cce72-b6b0-4f0f-81c1-b9b9375af656)# AImilia® Tutor AI - Alzheimer
 
 <div align="center">
-  <img src="/public/brain.svg" alt="AImilia Logo" width="120" />
+  <img src="/public/AImilia-logo.png" alt="AImilia Logo" width="120" />
   
   [![Made with React](https://img.shields.io/badge/Made%20with-React-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
   [![Powered by OpenAI](https://img.shields.io/badge/Powered%20by-OpenAI-412991?style=flat-square&logo=openai)](https://openai.com/)
