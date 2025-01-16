@@ -1,4 +1,4 @@
-![AImilia-logo](https://github.com/user-attachments/assets/4b3cce72-b6b0-4f0f-81c1-b9b9375af656)# AImilia® Tutor AI - Alzheimer
+# AImilia® Tutor AI - Alzheimer
 
 <div align="center">
   <img src="/public/AImilia-logo.png" alt="AImilia Logo" width="120" />
