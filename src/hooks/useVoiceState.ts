@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { setupSpeechRecognition } from '../utils/speech/speechRecognition';
+import { startSpeechRecognition } from '../utils/speech/speechRecognition';
 import { speak, cancelSpeech, isSpeechActive } from '../utils/speech/speechSynthesis';
 import type { SpeechError } from '../utils/speech/types';
 
@@ -21,7 +21,7 @@ export function useVoiceState({ onSpeechResult, lastBotMessage, onAmplitudeChang
 
   useEffect(() => {
     try {
-      recognitionRef.current = setupSpeechRecognition();
+      recognitionRef.current = startSpeechRecognition();
       setupRecognitionHandlers();
       setupAudioAnalyser();
     } catch (error) {

@@ -100,24 +100,18 @@ export async function speak(text: string, config: Partial<SpeechConfig> = {}): P
       };
 
       utterance.onerror = (event) => {
-        // Gracefully handle interruptions and cancellations
-        if (event.error === 'canceled' || event.error === 'interrupted') {
-          isSpeaking = false;
-          currentUtterance = null;
-          resolve(); // Resolve instead of reject for expected interruptions
-          return;
-        }
-
-        console.warn('Speech synthesis error:', event);
-        isSpeaking = false;
-        currentUtterance = null;
+        const error = event as SpeechSynthesisErrorEvent;
+        let errorMessage = 'Erro na síntese de voz';
         
-        // Only reject for unexpected errors
-        if (event.error !== 'canceled' && event.error !== 'interrupted') {
-          reject(createSpeechError('Speech synthesis failed', event));
-        } else {
-          resolve(); // Resolve for expected interruptions
+        if (error.error === 'not-allowed') {
+          errorMessage = 'Permissão para síntese de voz negada';
+        } else if (error.error === 'synthesis-unavailable') {
+          errorMessage = 'Síntese de voz não disponível';
+        } else if (error.error === 'language-unavailable') {
+          errorMessage = 'Idioma não disponível para síntese';
         }
+        
+        reject(createSpeechError(errorMessage, error));
       };
 
       window.speechSynthesis.speak(utterance);

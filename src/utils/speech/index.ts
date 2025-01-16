@@ -1,2 +1,3 @@
-export { speak } from './speechSynthesis';
-export { setupSpeechRecognition } from './speechRecognition';
+export * from './speechSynthesis';
+export * from './speechRecognition';
+export * from './types';

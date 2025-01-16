@@ -95,13 +95,13 @@ export async function getChatGPTResponse(userInput: string, conversationHistory:
     const medicalInfo = await formatMedicalInfo(userInput);
     
     const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system' as const, content: SYSTEM_PROMPT },
       ...conversationHistory.map(msg => ({
-        role: msg.isBot ? 'assistant' : 'user',
+        role: msg.isBot ? 'assistant' as const : 'user' as const,
         content: msg.text
       })),
-      { role: 'user', content: userInput + (medicalInfo ? `\n\nInformações médicas relevantes:\n${medicalInfo}` : '') }
-    ] as const;
+      { role: 'user' as const, content: userInput + (medicalInfo ? `\n\nInformações médicas relevantes:\n${medicalInfo}` : '') }
+    ];
 
     const completion = await openai.chat.completions.create({
       messages,

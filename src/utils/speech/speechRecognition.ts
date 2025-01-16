@@ -7,19 +7,28 @@ export function createSpeechRecognitionError(message: string, originalError?: an
   return error;
 }
 
-export function setupSpeechRecognition() {
-  if (!('webkitSpeechRecognition' in window)) {
-    throw createSpeechRecognitionError('Speech recognition is not supported in this browser');
+export function startSpeechRecognition(): Promise<string> {
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+    throw createSpeechRecognitionError('Reconhecimento de voz não suportado neste navegador');
   }
 
-  try {
-    const recognition = new window.webkitSpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'pt-PT'; // Portuguese (European)
+  const SpeechRecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognitionConstructor();
 
-    return recognition;
-  } catch (error) {
-    throw createSpeechRecognitionError('Failed to initialize speech recognition', error);
-  }
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'pt-PT';
+
+  return new Promise((resolve, reject) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      resolve(transcript);
+    };
+
+    recognition.onerror = (event: SpeechRecognitionError) => {
+      reject(createSpeechRecognitionError('Erro no reconhecimento de voz', event));
+    };
+
+    recognition.start();
+  });
 }
