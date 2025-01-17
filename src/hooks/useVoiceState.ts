@@ -19,32 +19,61 @@ export function useVoiceState({ onSpeechResult, lastBotMessage, onAmplitudeChang
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const animationFrameRef = useRef<number>();
 
-  useEffect(() => {
-    try {
-      recognitionRef.current = startSpeechRecognition();
-      setupRecognitionHandlers();
-      setupAudioAnalyser();
-    } catch (error) {
-      console.debug('Speech recognition initialization:', error);
-    }
+  const setupRecognitionHandlers = useCallback(() => {
+    if (!recognitionRef.current) return;
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      cancelSpeech();
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+    console.log(' Configurando handlers do reconhecimento de voz...');
+
+    recognitionRef.current.onresult = (event: any) => {
+      try {
+        console.log(' Recebido resultado do reconhecimento:', event.results);
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('');
+        
+        console.log(' Texto reconhecido:', transcript);
+        
+        if (event.results[0].isFinal) {
+          console.log(' Resultado final recebido, enviando para processamento...');
+          onSpeechResult(transcript);
+          stopListening();
+        }
+      } catch (error) {
+        console.error(' Erro ao processar resultado do reconhecimento:', error);
+        stopListening();
       }
     };
-  }, []);
+
+    recognitionRef.current.onerror = (event: any) => {
+      console.error(' Erro no reconhecimento de voz:', event.error);
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onend = () => {
+      console.log(' Reconhecimento de voz finalizado');
+      setIsListening(false);
+    };
+
+    recognitionRef.current.onstart = () => {
+      console.log(' Reconhecimento de voz iniciado');
+      setIsListening(true);
+    };
+
+    recognitionRef.current.onaudiostart = () => {
+      console.log(' Captura de áudio iniciada');
+    };
+
+    recognitionRef.current.onaudioend = () => {
+      console.log(' Captura de áudio finalizada');
+    };
+  }, [onSpeechResult]);
 
   const setupAudioAnalyser = async () => {
     try {
+      console.log(' Solicitando permissão do microfone...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log(' Permissão do microfone concedida');
+
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       analyserRef.current = audioContextRef.current.createAnalyser();
@@ -66,39 +95,51 @@ export function useVoiceState({ onSpeechResult, lastBotMessage, onAmplitudeChang
       };
 
       analyseAudio();
+      console.log(' Analisador de áudio configurado com sucesso');
     } catch (error) {
-      console.debug('Audio analyser setup:', error);
+      console.error(' Erro ao configurar analisador de áudio:', error);
     }
   };
 
-  const setupRecognitionHandlers = useCallback(() => {
-    if (!recognitionRef.current) return;
-
-    recognitionRef.current.onresult = (event: any) => {
+  useEffect(() => {
+    const initializeSpeech = async () => {
       try {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join('');
+        console.log(' Iniciando configuração do reconhecimento de voz...');
         
-        if (event.results[0].isFinal) {
-          onSpeechResult(transcript);
-          stopListening();
-        }
+        // Request microphone permission first
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log(' Permissão do microfone concedida');
+        
+        // Initialize speech recognition
+        const recognition = await startSpeechRecognition();
+        recognitionRef.current = recognition;
+        console.log(' Reconhecimento de voz inicializado');
+        
+        setupRecognitionHandlers();
+        await setupAudioAnalyser();
+        console.log(' Configuração completa do reconhecimento de voz');
       } catch (error) {
-        console.debug('Speech recognition result:', error);
-        stopListening();
+        console.error(' Erro na inicialização do reconhecimento de voz:', error);
       }
     };
 
-    recognitionRef.current.onerror = (event: any) => {
-      console.debug('Speech recognition error:', event);
-      setIsListening(false);
-    };
+    initializeSpeech();
 
-    recognitionRef.current.onend = () => {
-      setIsListening(false);
+    return () => {
+      console.log(' Limpando recursos do reconhecimento de voz...');
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      cancelSpeech();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+      console.log(' Recursos limpos com sucesso');
     };
-  }, [onSpeechResult]);
+  }, []);
 
   useEffect(() => {
     if (lastBotMessage && !isListening && !isMuted) {
@@ -110,28 +151,48 @@ export function useVoiceState({ onSpeechResult, lastBotMessage, onAmplitudeChang
       speak(lastBotMessage)
         .catch((error: SpeechError) => {
           if (error.type === 'synthesis' && error.originalError?.error !== 'interrupted') {
-            console.debug('Speech error:', error);
+            console.error(' Erro na síntese de voz:', error);
           }
         });
     }
   }, [lastBotMessage, isListening, isMuted, isInitialMessage]);
 
-  const startListening = useCallback(() => {
-    if (recognitionRef.current) {
-      cancelSpeech();
+  const startListening = useCallback(async () => {
+    console.log(' Iniciando reconhecimento de voz...');
+    
+    if (!recognitionRef.current) {
       try {
-        recognitionRef.current.start();
-        setIsListening(true);
+        console.log(' Inicializando nova instância de reconhecimento...');
+        const recognition = await startSpeechRecognition();
+        recognitionRef.current = recognition;
+        setupRecognitionHandlers();
+        console.log(' Nova instância criada com sucesso');
       } catch (error) {
-        setIsListening(false);
+        console.error(' Falha ao inicializar reconhecimento:', error);
+        return;
       }
     }
-  }, []);
+
+    cancelSpeech();
+    try {
+      console.log(' Iniciando captura de áudio...');
+      await recognitionRef.current.start();
+      setIsListening(true);
+      console.log(' Reconhecimento iniciado com sucesso');
+    } catch (error) {
+      console.error(' Falha ao iniciar escuta:', error);
+      setIsListening(false);
+    }
+  }, [setupRecognitionHandlers]);
 
   const stopListening = useCallback(() => {
+    console.log(' Parando reconhecimento de voz...');
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
+        console.log(' Reconhecimento parado com sucesso');
+      } catch (error) {
+        console.error(' Erro ao parar reconhecimento:', error);
       } finally {
         setIsListening(false);
       }
@@ -140,10 +201,12 @@ export function useVoiceState({ onSpeechResult, lastBotMessage, onAmplitudeChang
 
   const toggleMute = useCallback(() => {
     setIsMuted(prev => {
-      if (!prev && isSpeechActive()) {
+      const newState = !prev;
+      console.log(` ${newState ? 'Áudio mutado' : 'Áudio desmutado'}`);
+      if (!newState && isSpeechActive()) {
         cancelSpeech();
       }
-      return !prev;
+      return newState;
     });
   }, []);
 
