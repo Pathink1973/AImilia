@@ -7,7 +7,7 @@ export function createSpeechRecognitionError(message: string, originalError?: an
   return error;
 }
 
-export function startSpeechRecognition(): Promise<string> {
+export function startSpeechRecognition(): Promise<SpeechRecognition> {
   if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
     throw createSpeechRecognitionError('Reconhecimento de voz não suportado neste navegador');
   }
@@ -20,15 +20,11 @@ export function startSpeechRecognition(): Promise<string> {
   recognition.lang = 'pt-PT';
 
   return new Promise((resolve, reject) => {
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      resolve(transcript);
-    };
-
     recognition.onerror = (event: SpeechRecognitionError) => {
       reject(createSpeechRecognitionError('Erro no reconhecimento de voz', event));
     };
 
-    recognition.start();
+    // Return the recognition instance immediately
+    resolve(recognition);
   });
 }
